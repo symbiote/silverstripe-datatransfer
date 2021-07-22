@@ -3,6 +3,7 @@
 namespace Symbiote\DataTransfer;
 
 use DNADesign\ElementalList\Model\ElementList;
+use SilverStripe\Assets\File;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
@@ -232,6 +233,10 @@ class DataExport extends DataObject
             } else {
                 $properties['fields'][$name] = $item->$name;
             }
+        }
+
+        if ($item instanceof File) {
+            $properties['fields']['FilePath'] = $item->getAbsoluteURL();
         }
 
         if ($ones) {

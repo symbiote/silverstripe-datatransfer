@@ -21,6 +21,8 @@ class DataImport extends DataObject
         'ImportData' => 'Text',
     ];
 
+    private static $allowed_import_urls = [];
+
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
@@ -130,8 +132,18 @@ class DataImport extends DataObject
                 if ($object instanceof File) {
                     // check the item fields path key
                     $filePath = $item['fields']['FilePath'] ?? null;
-                    if ($filePath && file_exists(BASE_PATH . DIRECTORY_SEPARATOR . trim($filePath, "/"))) {
-                        $object->setFromLocalFile(BASE_PATH . DIRECTORY_SEPARATOR . trim($filePath, "/"));
+                    $allowed = file_exists(BASE_PATH . DIRECTORY_SEPARATOR . trim($filePath, "/")) ||
+                                count(array_filter(self::config()->allowed_import_urls, function ($path) use ($filePath) {
+                                    return strpos($filePath, $path) === 0;
+                                })) > 0;
+
+                    if ($filePath && $allowed) {
+                        if (strpos($filePath, '://') > 0) {
+                            $object->setFromStream(fopen($filePath, "r"), $item['fields']['Name'] ?? basename($filePath));
+                        } else {
+                            $object->setFromLocalFile(BASE_PATH . DIRECTORY_SEPARATOR . trim($filePath, "/"));
+                        }
+
                         $object->write();
                     }
                 }
