@@ -3,7 +3,6 @@
 namespace Symbiote\DataTransfer;
 
 use DNADesign\ElementalList\Model\ElementList;
-use SilverStripe\Assets\File;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
@@ -244,6 +243,7 @@ class DataExport extends DataObject
             foreach ($ones as $name => $expand) {
                 // get the object
                 $object = $item->hasMethod($name) ? $item->$name() : null;
+                if (is_null($object)) break;
                 if ($object && $object->exists()) {
                     $properties['one'][$name] = array('id' => $this->makeContentId($object));
                 }
@@ -259,6 +259,7 @@ class DataExport extends DataObject
             $properties['many'] = [];
             foreach ($many as $name => $expand) {
                 $rel = $item->hasMethod($name) ? $item->$name() : null;
+                if (is_null($rel)) break;
                 foreach ($rel as $object) {
                     if ($object && $object->exists()) {
                         $properties['many'][$name][] = array('id' => $this->makeContentId($object));
