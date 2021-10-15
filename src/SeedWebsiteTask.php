@@ -16,6 +16,8 @@ use Symbiote\Multisites\Multisites;
 
 class SeedWebsiteTask extends BuildTask
 {
+    private static $segment = 'SeedWebsiteTask';
+
     /**
      * Array of glob strings for matching import locations
      *
@@ -23,13 +25,28 @@ class SeedWebsiteTask extends BuildTask
      */
     private static $import_paths = [];
 
+    /**
+     * Set test email to reset password
+     * @var string
+     */
+    private static $tester_email = '';
+
+    /**
+     * Set new password
+     * @var string
+     */
     private static $tester_pass = '';
-    private static $tester_email = 'cypress-tester@symbiote.com.au';
 
-    private static $segment = 'SeedWebsiteTask';
-
+    /**
+     * Don't run the task in production site, set production host
+     * @var string
+     */
     private static $production_host = '';
 
+    /**
+     * For Multisite hosts, set an array of strings
+     * @var string[]
+     */
     private static $host_aliases = [];
 
     public function run($request)
@@ -90,7 +107,6 @@ class SeedWebsiteTask extends BuildTask
                         $object->obj('HostAliases')->setValue(self::config()->host_aliases);
                         $object->write();
                     }
-
 
                     if ($object && !($object instanceof BaseElement)) {
                         if ($object->hasMethod('publishRecursive')) {
