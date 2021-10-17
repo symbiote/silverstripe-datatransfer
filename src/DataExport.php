@@ -3,6 +3,7 @@
 namespace Symbiote\DataTransfer;
 
 use DNADesign\ElementalList\Model\ElementList;
+use SilverStripe\Assets\File;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
@@ -30,7 +31,17 @@ class DataExport extends DataObject
         'ExportedData' => 'Text',
     ];
 
+    /**
+     * Max object can execute
+     * @var int
+     */
     private static $max_export = 100;
+
+    /**
+     * Store object types
+     * @var string[]
+     */
+    private static $config_cache = [];
 
     /**
      * The fields and relationships to export for a given type
@@ -86,10 +97,6 @@ class DataExport extends DataObject
         ]
     ];
 
-    private static $export_cache;
-
-    private static $config_cache = [];
-
     /**
      * Classes listed in here won't be affected by the `IncludeAllFields` flag.
      * They will either need a configured list of fields to be exported, or will
@@ -108,23 +115,21 @@ class DataExport extends DataObject
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
-        $fields->replaceField('Filter', KeyValueField::create('Filter'));
-
         $types = ClassInfo::subclassesFor(DataObject::class);
+
         // Making search by class name easier since `DropdownField` doesn't
         // support partial matches
         $types = array_map(function ($type) {
             $segments = explode('\\', $type);
-
             return $segments[count($segments) - 1] . " ({$type})";
         }, $types);
+
         asort($types);
 
+        $fields->replaceField('Filter', KeyValueField::create('Filter')->setDescription('Fields, i.e ID -> 1'));
         $fields->replaceField('Type', DropdownField::create('Type', 'Data type', $types)->setEmptyString('Please select'));
-
-        $fields->dataFieldByName('IncludeRelations')->setRightTitle('Setting this false will exclude any related object being exported regardless of configuration');
-        $fields->dataFieldByName('IncludeAllFields')->setRightTitle('Setting this will overwrite configs and export the objects with all the properties. (Does not apply to protected classes.)');
-
+        $fields->dataFieldByName('IncludeRelations')->setDescription('Setting this false will exclude any related object being exported regardless of configuration');
+        $fields->dataFieldByName('IncludeAllFields')->setDescription('Setting this will overwrite configs and export the objects with all the properties. (Does not apply to protected classes.)');
         $fields->dataFieldByName('ExportedData')->setReadonly(true);
 
         return $fields;
@@ -136,7 +141,6 @@ class DataExport extends DataObject
 
         if ($this->DoExport) {
             $this->DoExport = false;
-
             if ($this->Type) {
                 $this->ExportedData = $this->export();
             }
@@ -154,8 +158,6 @@ class DataExport extends DataObject
         }
 
         $ex = [];
-        // $dependent = [];
-
         if ($list->count() > self::config()->max_export) {
             return json_encode(['error' => 'More than ' . self::config()->max_export . ' items found, please supply a filter'], JSON_PRETTY_PRINT);
         }
@@ -167,7 +169,7 @@ class DataExport extends DataObject
             }
         }
 
-        // reverse the order of creation so dependent items get created first
+        // Reverse the order of creation so dependent items get created first
         $ex = array_reverse($ex);
 
         return json_encode(['items' => $ex], JSON_PRETTY_PRINT);
@@ -222,7 +224,7 @@ class DataExport extends DataObject
         }
 
         foreach ($props as $name) {
-            // check for multivalue fields explicitly
+            // Check for multivalue fields explicitly
             $obj = $item->dbObject($name);
             if ($obj instanceof MultiValueField) {
                 $v = $obj->getValues();
@@ -241,9 +243,9 @@ class DataExport extends DataObject
         if ($ones) {
             $properties['one'] = [];
             foreach ($ones as $name => $expand) {
-                // get the object
                 $object = $item->hasMethod($name) ? $item->$name() : null;
-                if (is_null($object)) break;
+                //  If there is no object, let the export continue
+                if (!$object) break;
                 if ($object && $object->exists()) {
                     $properties['one'][$name] = array('id' => $this->makeContentId($object));
                 }
@@ -259,7 +261,7 @@ class DataExport extends DataObject
             $properties['many'] = [];
             foreach ($many as $name => $expand) {
                 $rel = $item->hasMethod($name) ? $item->$name() : null;
-                if (is_null($rel)) break;
+                if (!$rel) break;
                 foreach ($rel as $object) {
                     if ($object && $object->exists()) {
                         $properties['many'][$name][] = array('id' => $this->makeContentId($object));
@@ -300,6 +302,7 @@ class DataExport extends DataObject
         if (isset(self::$config_cache[$type])) {
             return self::$config_cache[$type];
         }
+
         $config = [];
         foreach (self::config()->export_fields as $typeInfo => $data) {
             if (is_a($type, $typeInfo, true)) {
@@ -307,7 +310,7 @@ class DataExport extends DataObject
             }
         }
 
-        // ensure classname is there, it's used for loading later!
+        // Ensure classname is there, it's used for loading later!
         if (isset($config['id']) && !in_array('ClassName', $config['id'])) {
             $config['id'][] = 'ClassName';
         }
