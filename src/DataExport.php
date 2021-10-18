@@ -38,6 +38,12 @@ class DataExport extends DataObject
     private static $max_export = 100;
 
     /**
+     * Increase the time limit of this script
+     * @var int seconds
+     */
+    private static $execution_time_limit = 300;
+
+    /**
      * Store object types
      * @var string[]
      */
@@ -149,7 +155,7 @@ class DataExport extends DataObject
 
     public function export()
     {
-        Environment::increaseTimeLimitTo(300);
+        Environment::increaseTimeLimitTo(self::config()->execution_time_limit);
 
         $list = DataList::create($this->Type);
         $filter = $this->Filter->getValues();
