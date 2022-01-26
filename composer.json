@@ -20,7 +20,8 @@
         }
     ],
     "require": {
-        "silverstripe/framework": "^4.0"
+        "silverstripe/framework": "^4.0",
+        "symbiote/silverstripe-multivaluefield": "^5.1"
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "^3.0",
@@ -40,8 +41,7 @@
         "branch-alias": {
             "dev-master": "1.1.x-dev"
         },
-        "expose": [
-        ]
+        "expose": []
     },
     "prefer-stable": true,
     "minimum-stability": "dev"
